@@ -1,0 +1,21 @@
+name: ZingMp3iOS
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "9.3"
+targets:
+  ZingMp3iOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: .
+        excludes:
+          - project.yml
+    info:
+      path: Info.plist
+    settings:
+      base:
+        VALID_ARCHS: armv7
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_ALLOWED: NO

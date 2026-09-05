@@ -1,0 +1,39 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [ main, master, dev-ios ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-13 # Uses macOS runner (Xcode 14/15)
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install XcodeGen
+      run: brew install xcodegen
+
+    - name: Generate Xcode Project
+      working-directory: ./ios_app/ZingMp3iOS
+      run: xcodegen generate
+
+    - name: Build App
+      working-directory: ./ios_app/ZingMp3iOS
+      run: |
+        xcodebuild clean build -project ZingMp3iOS.xcodeproj -scheme ZingMp3iOS -configuration Release -sdk iphoneos CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+
+    - name: Package into IPA
+      working-directory: ./ios_app/ZingMp3iOS
+      run: |
+        mkdir -p Payload
+        cp -r build/Release-iphoneos/ZingMp3iOS.app Payload/
+        zip -r ZingMp3iOS.ipa Payload
+
+    - name: Upload IPA Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ZingMp3iOS-App
+        path: ./ios_app/ZingMp3iOS/ZingMp3iOS.ipa

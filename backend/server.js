@@ -168,17 +168,31 @@ app.get('/api/category-mv', async (req, res) => {
   }
 });
 
-app.get('/api/video', async (req, res) => {
-  try {
-    const { id } = req.query;
-    if (!id) return res.status(400).json({ error: 'Missing id' });
-    const data = await ZingMp3.getVideo(String(id));
-    res.json(data);
-  } catch (e) {
-    res.status(e?.response?.status || 500).json({ error: e?.message || 'Internal Error' });
-  }
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+function startServer() {
+  return new Promise((resolve) => {
+    const server = app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+      resolve(true);
+    });
+    
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`Port ${PORT} is already in use. Assuming server is already running.`);
+        resolve(false);
+      } else {
+        console.error('Server error:', err);
+        resolve(false);
+      }
+    });
+  });
+}
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { app, startServer };
