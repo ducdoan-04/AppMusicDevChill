@@ -24,21 +24,30 @@
 }
 
 - (void)loadPlaylistData {
-    [[APIService sharedService] fetchPlaylistDetailForId:self.playlistId completion:^(NSDictionary *data, NSError *error) {
-        if (!error && data) {
-            NSDictionary *responseData = data[@"data"];
-            NSDictionary *songSection = responseData[@"song"];
-            NSArray *items = songSection[@"items"];
-            
-            if ([items isKindOfClass:[NSArray class]]) {
-                for (NSDictionary *dict in items) {
-                    Song *song = [[Song alloc] initWithDictionary:dict];
-                    [self.songs addObject:song];
-                }
-                [self.tableView reloadData];
-            }
+    if (self.isLocalPlaylist) {
+        if ([self.localPlaylistName isEqualToString:@"Downloaded"]) {
+            self.songs = [[[DataManager sharedManager] getDownloadedSongs] mutableCopy];
+        } else {
+            self.songs = [[[DataManager sharedManager] getSongsInPlaylist:self.localPlaylistName] mutableCopy];
         }
-    }];
+        [self.tableView reloadData];
+    } else {
+        [[APIService sharedService] fetchPlaylistDetailForId:self.playlistId completion:^(NSDictionary *data, NSError *error) {
+            if (!error && data) {
+                NSDictionary *responseData = data[@"data"];
+                NSDictionary *songSection = responseData[@"song"];
+                NSArray *items = songSection[@"items"];
+                
+                if ([items isKindOfClass:[NSArray class]]) {
+                    for (NSDictionary *dict in items) {
+                        Song *song = [[Song alloc] initWithDictionary:dict];
+                        [self.songs addObject:song];
+                    }
+                    [self.tableView reloadData];
+                }
+            }
+        }];
+    }
 }
 
 #pragma mark - Table view data source

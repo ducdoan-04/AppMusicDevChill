@@ -2,6 +2,7 @@
 #import "HomeViewController.h"
 #import "SearchViewController.h"
 #import "PlayerViewController.h"
+#import "LibraryViewController.h"
 
 @interface MainTabBarController ()
 
@@ -27,7 +28,12 @@
     UINavigationController *playerNav = [[UINavigationController alloc] initWithRootViewController:playerVC];
     playerNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"Đang Phát" image:nil tag:2];
     
-    self.viewControllers = @[homeNav, searchNav, playerNav];
+    LibraryViewController *libVC = [[LibraryViewController alloc] init];
+    libVC.title = @"Thư Viện";
+    UINavigationController *libNav = [[UINavigationController alloc] initWithRootViewController:libVC];
+    libNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"Thư Viện" image:nil tag:3];
+    
+    self.viewControllers = @[homeNav, searchNav, playerNav, libNav];
     
     // Đổi màu TabBar sang Dark Mode
     self.tabBar.barStyle = UIBarStyleBlack;

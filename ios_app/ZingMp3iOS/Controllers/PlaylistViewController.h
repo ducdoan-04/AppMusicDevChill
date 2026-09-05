@@ -6,4 +6,7 @@
 @property (nonatomic, copy) NSString *playlistId;
 @property (nonatomic, copy) NSString *playlistTitle;
 
+@property (nonatomic, assign) BOOL isLocalPlaylist;
+@property (nonatomic, copy) NSString *localPlaylistName;
+
 @end

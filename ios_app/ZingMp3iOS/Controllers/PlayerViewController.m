@@ -1,6 +1,8 @@
 #import "PlayerViewController.h"
 #import "AudioPlayer.h"
 #import "APIService.h"
+#import "DataManager.h"
+#import "DownloadManager.h"
 #import <MediaPlayer/MediaPlayer.h>
 
 @interface PlayerViewController ()
@@ -94,8 +96,25 @@
     self.artistLabel.text = @"Vui lòng chọn bài hát";
     [self.view addSubview:self.artistLabel];
     
+    // Extra Buttons (Add & Download)
+    CGFloat extraY = CGRectGetMaxY(self.artistLabel.frame) + 10;
+    
+    UIButton *addButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    addButton.frame = CGRectMake((screenWidth / 2) - 60, extraY, 40, 40);
+    [addButton setTitle:@"➕" forState:UIControlStateNormal];
+    addButton.titleLabel.font = [UIFont systemFontOfSize:24];
+    [addButton addTarget:self action:@selector(addToPlaylistTapped) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:addButton];
+    
+    UIButton *downloadButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    downloadButton.frame = CGRectMake((screenWidth / 2) + 20, extraY, 40, 40);
+    [downloadButton setTitle:@"⬇️" forState:UIControlStateNormal];
+    downloadButton.titleLabel.font = [UIFont systemFontOfSize:24];
+    [downloadButton addTarget:self action:@selector(downloadTapped) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:downloadButton];
+    
     // 5. Timeline Slider
-    CGFloat sliderY = CGRectGetMaxY(self.artistLabel.frame) + 20;
+    CGFloat sliderY = CGRectGetMaxY(addButton.frame) + 15;
     self.timeSlider = [[UISlider alloc] initWithFrame:CGRectMake(50, sliderY, screenWidth - 100, 30)];
     self.timeSlider.minimumTrackTintColor = [UIColor colorWithRed:0.6 green:0.2 blue:0.8 alpha:1.0];
     self.timeSlider.maximumTrackTintColor = [UIColor colorWithWhite:1.0 alpha:0.3];
@@ -145,8 +164,26 @@
     [self.view addSubview:self.nextButton];
     
     // 7. Volume
-    self.volumeView = [[MPVolumeView alloc] initWithFrame:CGRectMake(30, CGRectGetMaxY(self.playPauseButton.frame) + 30, screenWidth - 60, 20)];
-    self.volumeView.tintColor = [UIColor whiteColor];
+    self.volumeView = [[MPVolumeView alloc] initWithFrame:CGRectMake(50, CGRectGetMaxY(self.playPauseButton.frame) + 30, screenWidth - 100, 20)];
+    self.volumeView.tintColor = [UIColor colorWithRed:0.6 green:0.2 blue:0.8 alpha:1.0];
+    
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(12, 12), NO, 0.0);
+    CGContextRef ctx = UIGraphicsGetCurrentContext();
+    CGContextSetFillColorWithColor(ctx, [UIColor whiteColor].CGColor);
+    CGContextFillEllipseInRect(ctx, CGRectMake(0, 0, 12, 12));
+    UIImage *thumbImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    [self.volumeView setVolumeThumbImage:thumbImage forState:UIControlStateNormal];
+    
+    for (UIView *view in self.volumeView.subviews) {
+        if ([view isKindOfClass:[UISlider class]]) {
+            UISlider *slider = (UISlider *)view;
+            slider.minimumTrackTintColor = [UIColor colorWithRed:0.6 green:0.2 blue:0.8 alpha:1.0];
+            slider.maximumTrackTintColor = [UIColor colorWithWhite:1.0 alpha:0.3];
+        }
+    }
+    
     [self.view addSubview:self.volumeView];
 }
 
@@ -259,6 +296,70 @@
     int minutes = floor(timeInSeconds / 60);
     int seconds = round(timeInSeconds - (minutes * 60));
     return [NSString stringWithFormat:@"%d:%02d", minutes, seconds];
+}
+
+- (void)addToPlaylistTapped {
+    if (!self.currentSong) return;
+    
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Thêm vào Playlist" message:@"Chọn playlist hoặc tạo mới" preferredStyle:UIAlertControllerStyleActionSheet];
+    
+    NSArray *playlists = [[DataManager sharedManager] getCustomPlaylists];
+    for (NSString *pName in playlists) {
+        UIAlertAction *action = [UIAlertAction actionWithTitle:pName style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            [[DataManager sharedManager] addSong:self.currentSong toPlaylist:pName];
+            [self showToast:@"Đã thêm vào playlist!"];
+        }];
+        [alert addAction:action];
+    }
+    
+    UIAlertAction *newAction = [UIAlertAction actionWithTitle:@"Tạo mới..." style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        UIAlertController *inputAlert = [UIAlertController alertControllerWithTitle:@"Playlist mới" message:@"Nhập tên playlist" preferredStyle:UIAlertControllerStyleAlert];
+        [inputAlert addTextFieldWithConfigurationHandler:nil];
+        UIAlertAction *saveAction = [UIAlertAction actionWithTitle:@"Tạo" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            NSString *name = inputAlert.textFields.firstObject.text;
+            if (name.length > 0) {
+                [[DataManager sharedManager] createPlaylist:name];
+                [[DataManager sharedManager] addSong:self.currentSong toPlaylist:name];
+                [self showToast:@"Đã tạo và thêm bài hát!"];
+            }
+        }];
+        [inputAlert addAction:saveAction];
+        [inputAlert addAction:[UIAlertAction actionWithTitle:@"Huỷ" style:UIAlertActionStyleCancel handler:nil]];
+        [self presentViewController:inputAlert animated:YES completion:nil];
+    }];
+    [alert addAction:newAction];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:@"Huỷ" style:UIAlertActionStyleCancel handler:nil]];
+    
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+        alert.popoverPresentationController.sourceView = self.view;
+        alert.popoverPresentationController.sourceRect = CGRectMake(self.view.bounds.size.width / 2, self.view.bounds.size.height / 2, 0, 0);
+        alert.popoverPresentationController.permittedArrowDirections = 0;
+    }
+    
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)downloadTapped {
+    if (!self.currentSong) return;
+    
+    [self showToast:@"Đang tải..."];
+    [[DownloadManager sharedManager] downloadSong:self.currentSong progress:nil completion:^(BOOL success, NSError *error) {
+        if (success) {
+            [self showToast:@"Tải thành công!"];
+        } else {
+            [self showToast:@"Tải thất bại!"];
+        }
+    }];
+}
+
+- (void)showToast:(NSString *)message {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:message preferredStyle:UIAlertControllerStyleAlert];
+    [self presentViewController:alert animated:YES completion:^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [alert dismissViewControllerAnimated:YES completion:nil];
+        });
+    }];
 }
 
 @end

@@ -1,5 +1,6 @@
 #import "AudioPlayer.h"
 #import "APIService.h"
+#import "DataManager.h"
 
 @interface AudioPlayer ()
 
@@ -31,22 +32,37 @@
     
     self.isPlaying = NO;
     
-    [[APIService sharedService] fetchStreamURLForSongId:song.songId completion:^(NSString *streamURL, NSError *error) {
-        if (!error && streamURL) {
-            NSURL *url = [NSURL URLWithString:streamURL];
-            self.player = [[AVPlayer alloc] initWithURL:url];
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(itemDidFinishPlaying:) name:AVPlayerItemDidPlayToEndTimeNotification object:self.player.currentItem];
-            [self.player play];
-            self.isPlaying = YES;
-            
-            // Setup Audio Session for background playback
-            NSError *sessionError = nil;
-            [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:&sessionError];
-            [[AVAudioSession sharedInstance] setActive:YES error:nil];
-        } else {
-            NSLog(@"Failed to get stream URL: %@", error);
-        }
-    }];
+    NSString *localFile = [[DataManager sharedManager] getLocalPathForSongId:song.songId];
+    if (localFile) {
+        NSString *docsDir = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+        NSString *fullPath = [docsDir stringByAppendingPathComponent:localFile];
+        NSURL *localURL = [NSURL fileURLWithPath:fullPath];
+        
+        self.player = [[AVPlayer alloc] initWithURL:localURL];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(itemDidFinishPlaying:) name:AVPlayerItemDidPlayToEndTimeNotification object:self.player.currentItem];
+        [self.player play];
+        self.isPlaying = YES;
+        [self setupAudioSession];
+    } else {
+        [[APIService sharedService] fetchStreamURLForSongId:song.songId completion:^(NSString *streamURL, NSError *error) {
+            if (!error && streamURL) {
+                NSURL *url = [NSURL URLWithString:streamURL];
+                self.player = [[AVPlayer alloc] initWithURL:url];
+                [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(itemDidFinishPlaying:) name:AVPlayerItemDidPlayToEndTimeNotification object:self.player.currentItem];
+                [self.player play];
+                self.isPlaying = YES;
+                [self setupAudioSession];
+            } else {
+                NSLog(@"Failed to get stream URL: %@", error);
+            }
+        }];
+    }
+}
+
+- (void)setupAudioSession {
+    NSError *sessionError = nil;
+    [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:&sessionError];
+    [[AVAudioSession sharedInstance] setActive:YES error:nil];
 }
 
 - (void)pause {
