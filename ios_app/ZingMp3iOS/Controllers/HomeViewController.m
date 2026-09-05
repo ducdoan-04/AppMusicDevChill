@@ -2,6 +2,7 @@
 #import "APIService.h"
 #import "Song.h"
 #import "PlayerViewController.h"
+#import "PlaylistViewController.h"
 
 @interface HomeViewController ()
 
@@ -113,10 +114,13 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
-    Song *selectedSong = self.songs[indexPath.row];
+    Song *selectedPlaylist = self.songs[indexPath.row];
     
-    [[PlayerViewController sharedPlayerVC] playNewSong:selectedSong playlist:self.songs currentIndex:indexPath.row];
-    self.tabBarController.selectedIndex = 2; // Jump to Player tab
+    PlaylistViewController *playlistVC = [[PlaylistViewController alloc] init];
+    playlistVC.playlistId = selectedPlaylist.songId;
+    playlistVC.playlistTitle = selectedPlaylist.title;
+    
+    [self.navigationController pushViewController:playlistVC animated:YES];
 }
 
 @end

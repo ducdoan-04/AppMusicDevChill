@@ -137,6 +137,16 @@
     [self performZingRequestWithPath:path params:params sig:sig ctime:ctime completion:completion];
 }
 
+- (void)fetchPlaylistDetailForId:(NSString *)playlistId completion:(void (^)(NSDictionary *data, NSError *error))completion {
+    NSString *ctime = [NSString stringWithFormat:@"%ld", (long)[[NSDate date] timeIntervalSince1970]];
+    NSString *path = @"/api/v2/page/get/playlist";
+    NSString *hash256 = [self getHash256:[NSString stringWithFormat:@"ctime=%@id=%@version=%@", ctime, playlistId, ZING_VERSION]];
+    NSString *sig = [self getHmac512:[NSString stringWithFormat:@"%@%@", path, hash256] key:ZING_SECRET_KEY];
+    
+    NSDictionary *params = @{@"id": playlistId};
+    [self performZingRequestWithPath:path params:params sig:sig ctime:ctime completion:completion];
+}
+
 - (void)fetchStreamURLForSongId:(NSString *)songId completion:(void (^)(NSString *streamURL, NSError *error))completion {
     NSString *ctime = [NSString stringWithFormat:@"%ld", (long)[[NSDate date] timeIntervalSince1970]];
     NSString *path = @"/api/v2/song/get/streaming";

@@ -70,7 +70,9 @@
     
     // 3. Cover Image
     CGFloat coverSize = screenWidth - 60;
-    self.coverImageView = [[UIImageView alloc] initWithFrame:CGRectMake(30, 80, coverSize, coverSize)];
+    if (coverSize > 320) coverSize = 320; // Giới hạn kích thước tối đa cho iPad
+    CGFloat coverX = (screenWidth - coverSize) / 2;
+    self.coverImageView = [[UIImageView alloc] initWithFrame:CGRectMake(coverX, 80, coverSize, coverSize)];
     self.coverImageView.contentMode = UIViewContentModeScaleAspectFill;
     self.coverImageView.layer.cornerRadius = 15.0;
     self.coverImageView.layer.masksToBounds = YES;
@@ -78,14 +80,14 @@
     [self.view addSubview:self.coverImageView];
     
     // 4. Labels
-    self.titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(30, CGRectGetMaxY(self.coverImageView.frame) + 30, coverSize, 30)];
+    self.titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(30, CGRectGetMaxY(self.coverImageView.frame) + 30, screenWidth - 60, 30)];
     self.titleLabel.textAlignment = NSTextAlignmentCenter;
     self.titleLabel.font = [UIFont boldSystemFontOfSize:22];
     self.titleLabel.textColor = [UIColor whiteColor];
     self.titleLabel.text = @"Chưa có bài hát";
     [self.view addSubview:self.titleLabel];
     
-    self.artistLabel = [[UILabel alloc] initWithFrame:CGRectMake(30, CGRectGetMaxY(self.titleLabel.frame) + 5, coverSize, 20)];
+    self.artistLabel = [[UILabel alloc] initWithFrame:CGRectMake(30, CGRectGetMaxY(self.titleLabel.frame) + 5, screenWidth - 60, 20)];
     self.artistLabel.textAlignment = NSTextAlignmentCenter;
     self.artistLabel.font = [UIFont systemFontOfSize:16];
     self.artistLabel.textColor = [UIColor colorWithWhite:0.8 alpha:1.0];
