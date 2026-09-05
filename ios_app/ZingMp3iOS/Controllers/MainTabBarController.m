@@ -13,22 +13,31 @@
     [super viewDidLoad];
     
     HomeViewController *homeVC = [[HomeViewController alloc] init];
-    homeVC.title = @"Home";
+    homeVC.title = @"Khám Phá";
     UINavigationController *homeNav = [[UINavigationController alloc] initWithRootViewController:homeVC];
-    homeNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"Home" image:nil tag:0];
+    homeNav.tabBarItem = [[UITabBarItem alloc] initWithTabBarSystemItem:UITabBarSystemItemFeatured tag:0];
     
     SearchViewController *searchVC = [[SearchViewController alloc] init];
-    searchVC.title = @"Search";
+    searchVC.title = @"Tìm Kiếm";
     UINavigationController *searchNav = [[UINavigationController alloc] initWithRootViewController:searchVC];
-    searchNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"Search" image:nil tag:1];
+    searchNav.tabBarItem = [[UITabBarItem alloc] initWithTabBarSystemItem:UITabBarSystemItemSearch tag:1];
     
     PlayerViewController *playerVC = [PlayerViewController sharedPlayerVC];
-    playerVC.title = @"Now Playing";
+    playerVC.title = @"Đang Phát";
     UINavigationController *playerNav = [[UINavigationController alloc] initWithRootViewController:playerVC];
-    playerNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"Player" image:nil tag:2];
+    playerNav.tabBarItem = [[UITabBarItem alloc] initWithTabBarSystemItem:UITabBarSystemItemPlay tag:2];
     
     self.viewControllers = @[homeNav, searchNav, playerNav];
-    self.tabBar.translucent = NO;
+    
+    // Đổi màu TabBar sang Dark Mode
+    self.tabBar.barStyle = UIBarStyleBlack;
+    self.tabBar.translucent = YES;
+    self.tabBar.tintColor = [UIColor colorWithRed:0.6 green:0.2 blue:0.8 alpha:1.0]; // Màu tím Zing
+    
+    // Đổi màu NavigationBar sang Dark Mode
+    [[UINavigationBar appearance] setBarStyle:UIBarStyleBlack];
+    [[UINavigationBar appearance] setTranslucent:YES];
+    [[UINavigationBar appearance] setTintColor:[UIColor colorWithRed:0.6 green:0.2 blue:0.8 alpha:1.0]];
 }
 
 @end
