@@ -2,6 +2,7 @@
 #import "APIService.h"
 #import "DataManager.h"
 #import "PlayerViewController.h"
+#import "DownloadManager.h"
 
 @interface PlaylistViewController ()
 
@@ -74,11 +75,33 @@
         cell.imageView.contentMode = UIViewContentModeScaleAspectFill;
         cell.imageView.clipsToBounds = YES;
         cell.imageView.layer.cornerRadius = 5.0;
+        
+        UIView *accessoryView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 80, 40)];
+        UIButton *addButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        addButton.frame = CGRectMake(0, 0, 40, 40);
+        [addButton setTitle:@"➕" forState:UIControlStateNormal];
+        [addButton addTarget:self action:@selector(addTapped:) forControlEvents:UIControlEventTouchUpInside];
+        [accessoryView addSubview:addButton];
+        
+        UIButton *downButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        downButton.frame = CGRectMake(40, 0, 40, 40);
+        [downButton setTitle:@"⬇️" forState:UIControlStateNormal];
+        [downButton addTarget:self action:@selector(downTapped:) forControlEvents:UIControlEventTouchUpInside];
+        [accessoryView addSubview:downButton];
+        
+        cell.accessoryView = accessoryView;
     }
     
     Song *song = self.songs[indexPath.row];
     cell.textLabel.text = song.title;
     cell.detailTextLabel.text = song.artistsNames;
+    
+    if (cell.accessoryView && cell.accessoryView.subviews.count >= 2) {
+        UIButton *btn1 = cell.accessoryView.subviews[0];
+        UIButton *btn2 = cell.accessoryView.subviews[1];
+        btn1.tag = indexPath.row;
+        btn2.tag = indexPath.row;
+    }
     cell.imageView.image = [UIImage imageNamed:@"placeholder"];
     
     if (song.thumbnailUrl) {
@@ -111,6 +134,74 @@
     
     [[PlayerViewController sharedPlayerVC] playNewSong:selectedSong playlist:self.songs currentIndex:indexPath.row];
     self.tabBarController.selectedIndex = 2; // Jump to Player tab
+}
+
+- (void)addTapped:(UIButton *)sender {
+    NSInteger index = sender.tag;
+    if (index < 0 || index >= self.songs.count) return;
+    Song *song = self.songs[index];
+    
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Thêm vào Playlist" message:@"Chọn playlist hoặc tạo mới" preferredStyle:UIAlertControllerStyleActionSheet];
+    
+    NSArray *playlists = [[DataManager sharedManager] getCustomPlaylists];
+    for (NSString *pName in playlists) {
+        UIAlertAction *action = [UIAlertAction actionWithTitle:pName style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            [[DataManager sharedManager] addSong:song toPlaylist:pName];
+            [self showToast:@"Đã thêm vào playlist!"];
+        }];
+        [alert addAction:action];
+    }
+    
+    UIAlertAction *newAction = [UIAlertAction actionWithTitle:@"Tạo mới..." style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        UIAlertController *inputAlert = [UIAlertController alertControllerWithTitle:@"Playlist mới" message:@"Nhập tên playlist" preferredStyle:UIAlertControllerStyleAlert];
+        [inputAlert addTextFieldWithConfigurationHandler:nil];
+        UIAlertAction *saveAction = [UIAlertAction actionWithTitle:@"Tạo" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            NSString *name = inputAlert.textFields.firstObject.text;
+            if (name.length > 0) {
+                [[DataManager sharedManager] createPlaylist:name];
+                [[DataManager sharedManager] addSong:song toPlaylist:name];
+                [self showToast:@"Đã tạo và thêm bài hát!"];
+            }
+        }];
+        [inputAlert addAction:saveAction];
+        [inputAlert addAction:[UIAlertAction actionWithTitle:@"Huỷ" style:UIAlertActionStyleCancel handler:nil]];
+        [self presentViewController:inputAlert animated:YES completion:nil];
+    }];
+    [alert addAction:newAction];
+    
+    [alert addAction:[UIAlertAction actionWithTitle:@"Huỷ" style:UIAlertActionStyleCancel handler:nil]];
+    
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+        alert.popoverPresentationController.sourceView = sender;
+        alert.popoverPresentationController.sourceRect = sender.bounds;
+        alert.popoverPresentationController.permittedArrowDirections = UIPopoverArrowDirectionAny;
+    }
+    
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)downTapped:(UIButton *)sender {
+    NSInteger index = sender.tag;
+    if (index < 0 || index >= self.songs.count) return;
+    Song *song = self.songs[index];
+    
+    [self showToast:@"Đang tải..."];
+    [[DownloadManager sharedManager] downloadSong:song progress:nil completion:^(BOOL success, NSError *error) {
+        if (success) {
+            [self showToast:@"Tải thành công!"];
+        } else {
+            [self showToast:@"Tải thất bại!"];
+        }
+    }];
+}
+
+- (void)showToast:(NSString *)message {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:message preferredStyle:UIAlertControllerStyleAlert];
+    [self presentViewController:alert animated:YES completion:^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [alert dismissViewControllerAnimated:YES completion:nil];
+        });
+    }];
 }
 
 @end

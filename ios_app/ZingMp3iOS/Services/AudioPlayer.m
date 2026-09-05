@@ -44,6 +44,11 @@
         self.isPlaying = YES;
         [self setupAudioSession];
     } else {
+        UIBackgroundTaskIdentifier __block bgTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
+            [[UIApplication sharedApplication] endBackgroundTask:bgTask];
+            bgTask = UIBackgroundTaskInvalid;
+        }];
+        
         [[APIService sharedService] fetchStreamURLForSongId:song.songId completion:^(NSString *streamURL, NSError *error) {
             if (!error && streamURL) {
                 NSURL *url = [NSURL URLWithString:streamURL];
@@ -54,6 +59,11 @@
                 [self setupAudioSession];
             } else {
                 NSLog(@"Failed to get stream URL: %@", error);
+            }
+            
+            if (bgTask != UIBackgroundTaskInvalid) {
+                [[UIApplication sharedApplication] endBackgroundTask:bgTask];
+                bgTask = UIBackgroundTaskInvalid;
             }
         }];
     }
