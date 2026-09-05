@@ -1,5 +1,6 @@
 #import "PlaylistViewController.h"
 #import "APIService.h"
+#import "DataManager.h"
 #import "PlayerViewController.h"
 
 @interface PlaylistViewController ()
