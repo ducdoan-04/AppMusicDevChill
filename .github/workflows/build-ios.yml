@@ -9,14 +9,14 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest # Using Ubuntu instead of macOS for much faster/cheaper build
+    runs-on: macos-latest # Using macOS with Theos to get the Apple toolchain (Clang/ld64)
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install -y fakeroot ldid
+      run: brew install ldid fakeroot
 
     - name: Setup Theos and iOS SDK
       run: |
