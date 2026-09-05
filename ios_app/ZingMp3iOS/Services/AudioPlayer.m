@@ -1,6 +1,7 @@
 #import "AudioPlayer.h"
 #import "APIService.h"
 #import "DataManager.h"
+#import <UIKit/UIKit.h>
 
 @interface AudioPlayer ()
 
