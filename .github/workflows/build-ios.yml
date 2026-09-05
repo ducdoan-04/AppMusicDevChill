@@ -23,7 +23,7 @@ jobs:
     - name: Build App
       working-directory: ./ios_app/ZingMp3iOS
       run: |
-        xcodebuild clean build -project ZingMp3iOS.xcodeproj -scheme ZingMp3iOS -configuration Release -sdk iphoneos CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+        xcodebuild clean build -project ZingMp3iOS.xcodeproj -scheme ZingMp3iOS -configuration Release -sdk iphoneos CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO SYMROOT=build
 
     - name: Package into IPA
       working-directory: ./ios_app/ZingMp3iOS
