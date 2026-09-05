@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-13 # Uses macOS runner (Xcode 14/15)
+    runs-on: macos-latest # Uses the latest available macOS runner
 
     steps:
     - name: Checkout code
