@@ -88,8 +88,8 @@
     // Placeholder while loading image
     cell.imageView.image = [UIImage imageNamed:@"placeholder"]; // If nil, it just won't show initially
     
-    if (song.thumbnail) {
-        NSURL *url = [NSURL URLWithString:song.thumbnail];
+    if (song.thumbnailUrl) {
+        NSURL *url = [NSURL URLWithString:song.thumbnailUrl];
         // Simple async image loading
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
             NSData *data = [NSData dataWithContentsOfURL:url];

@@ -90,8 +90,8 @@
     
     cell.imageView.image = [UIImage imageNamed:@"placeholder"];
     
-    if (song.thumbnail) {
-        NSURL *url = [NSURL URLWithString:song.thumbnail];
+    if (song.thumbnailUrl) {
+        NSURL *url = [NSURL URLWithString:song.thumbnailUrl];
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
             NSData *data = [NSData dataWithContentsOfURL:url];
             if (data) {
