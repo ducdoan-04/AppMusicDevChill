@@ -2,34 +2,39 @@ name: Build iOS IPA
 
 on:
   push:
-    branches: [ main, master, dev-ios ]
+    branches:
+      - main
+      - dev-ios
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-latest # Uses the latest available macOS runner
+    runs-on: ubuntu-latest # Using Ubuntu instead of macOS for much faster/cheaper build
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install XcodeGen
-      run: brew install xcodegen
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y fakeroot ldid
 
-    - name: Generate Xcode Project
-      working-directory: ./ios_app/ZingMp3iOS
-      run: xcodegen generate
+    - name: Setup Theos and iOS SDK
+      run: |
+        git clone --recursive https://github.com/theos/theos.git $GITHUB_WORKSPACE/theos
+        git clone https://github.com/theos/sdks.git $GITHUB_WORKSPACE/theos/sdks
 
-    - name: Build App
+    - name: Build App for armv7 (iOS 9.3.5)
       working-directory: ./ios_app/ZingMp3iOS
       run: |
-        xcodebuild clean build -project ZingMp3iOS.xcodeproj -scheme ZingMp3iOS -configuration Release -sdk iphoneos CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES SYMROOT=build
+        make clean all THEOS=$GITHUB_WORKSPACE/theos
 
     - name: Package into IPA
       working-directory: ./ios_app/ZingMp3iOS
       run: |
         mkdir -p Payload
-        cp -r build/Release-iphoneos/ZingMp3iOS.app Payload/
+        cp -r .theos/obj/debug/ZingMp3iOS.app Payload/
+        # Sideloadly expects Info.plist inside the app bundle to be named exactly "Info.plist"
+        # Theos sometimes uses Info.plist, let's verify
         zip -r ZingMp3iOS.ipa Payload
 
     - name: Upload IPA Artifact
