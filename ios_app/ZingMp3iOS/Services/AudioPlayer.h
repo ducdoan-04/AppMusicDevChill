@@ -14,5 +14,7 @@
 - (void)pause;
 - (void)resume;
 - (void)seekToTime:(NSTimeInterval)time;
+- (CGFloat)getDuration;
+- (CGFloat)getCurrentTime;
 
 @end

@@ -4,6 +4,6 @@
 @interface PlayerViewController : UIViewController
 
 + (instancetype)sharedPlayerVC;
-- (void)playNewSong:(Song *)song;
+- (void)playNewSong:(Song *)song playlist:(NSArray<Song *> *)playlist currentIndex:(NSInteger)index;
 
 @end

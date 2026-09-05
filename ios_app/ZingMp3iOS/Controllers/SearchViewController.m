@@ -15,7 +15,8 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor colorWithRed:0.07 green:0.07 blue:0.09 alpha:1.0];
-    self.tableView.backgroundColor = [UIColor clearColor];
+    self.tableView.backgroundColor = [UIColor colorWithRed:0.07 green:0.07 blue:0.09 alpha:1.0];
+    self.tableView.backgroundView = nil;
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
     
     self.searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 44)];
@@ -114,7 +115,7 @@
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     Song *selectedSong = self.searchResults[indexPath.row];
     
-    [[PlayerViewController sharedPlayerVC] playNewSong:selectedSong];
+    [[PlayerViewController sharedPlayerVC] playNewSong:selectedSong playlist:self.searchResults currentIndex:indexPath.row];
     self.tabBarController.selectedIndex = 2; // Jump to Player tab
 }
 

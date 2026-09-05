@@ -24,6 +24,7 @@
     self.currentSong = song;
     
     if (self.player) {
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:AVPlayerItemDidPlayToEndTimeNotification object:self.player.currentItem];
         [self.player pause];
         self.player = nil;
     }
@@ -34,6 +35,7 @@
         if (!error && streamURL) {
             NSURL *url = [NSURL URLWithString:streamURL];
             self.player = [[AVPlayer alloc] initWithURL:url];
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(itemDidFinishPlaying:) name:AVPlayerItemDidPlayToEndTimeNotification object:self.player.currentItem];
             [self.player play];
             self.isPlaying = YES;
             
@@ -60,6 +62,26 @@
 - (void)seekToTime:(NSTimeInterval)time {
     CMTime cmTime = CMTimeMakeWithSeconds(time, 1);
     [self.player seekToTime:cmTime];
+}
+
+- (void)itemDidFinishPlaying:(NSNotification *)notification {
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"AudioPlayerDidFinishPlaying" object:nil];
+}
+
+- (CGFloat)getDuration {
+    if (self.player && self.player.currentItem) {
+        Float64 dur = CMTimeGetSeconds(self.player.currentItem.duration);
+        return isnan(dur) ? 0 : dur;
+    }
+    return 0;
+}
+
+- (CGFloat)getCurrentTime {
+    if (self.player) {
+        Float64 cur = CMTimeGetSeconds(self.player.currentTime);
+        return isnan(cur) ? 0 : cur;
+    }
+    return 0;
 }
 
 @end

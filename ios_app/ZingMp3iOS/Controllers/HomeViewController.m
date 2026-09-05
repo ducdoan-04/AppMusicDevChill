@@ -14,7 +14,8 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor colorWithRed:0.07 green:0.07 blue:0.09 alpha:1.0];
-    self.tableView.backgroundColor = [UIColor clearColor];
+    self.tableView.backgroundColor = [UIColor colorWithRed:0.07 green:0.07 blue:0.09 alpha:1.0];
+    self.tableView.backgroundView = nil;
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
     
     // Use Subtitle style to show Title + Artist
@@ -114,7 +115,7 @@
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     Song *selectedSong = self.songs[indexPath.row];
     
-    [[PlayerViewController sharedPlayerVC] playNewSong:selectedSong];
+    [[PlayerViewController sharedPlayerVC] playNewSong:selectedSong playlist:self.songs currentIndex:indexPath.row];
     self.tabBarController.selectedIndex = 2; // Jump to Player tab
 }
 

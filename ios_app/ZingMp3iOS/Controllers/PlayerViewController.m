@@ -1,6 +1,7 @@
 #import "PlayerViewController.h"
 #import "AudioPlayer.h"
 #import "APIService.h"
+#import <MediaPlayer/MediaPlayer.h>
 
 @interface PlayerViewController ()
 
@@ -9,8 +10,25 @@
 @property (nonatomic, strong) UIImageView *coverImageView;
 @property (nonatomic, strong) UILabel *titleLabel;
 @property (nonatomic, strong) UILabel *artistLabel;
+
+// Playback controls
+@property (nonatomic, strong) UISlider *timeSlider;
+@property (nonatomic, strong) UILabel *currentTimeLabel;
+@property (nonatomic, strong) UILabel *durationLabel;
+@property (nonatomic, strong) UIButton *prevButton;
 @property (nonatomic, strong) UIButton *playPauseButton;
+@property (nonatomic, strong) UIButton *nextButton;
+@property (nonatomic, strong) MPVolumeView *volumeView;
+
+// Playlist state
+@property (nonatomic, strong) NSArray<Song *> *currentPlaylist;
+@property (nonatomic, assign) NSInteger currentIndex;
+@property (nonatomic, strong) Song *currentSong;
+
+// Lyric
 @property (nonatomic, strong) UITextView *lyricTextView;
+@property (nonatomic, strong) NSTimer *progressTimer;
+@property (nonatomic, assign) BOOL isUserScrubbing;
 
 @end
 
@@ -27,13 +45,19 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.view.backgroundColor = [UIColor whiteColor];
+    self.view.backgroundColor = [UIColor colorWithRed:0.05 green:0.05 blue:0.07 alpha:1.0];
     
     [self setupUI];
+    
+    // Notification for auto-next
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleSongEnded) name:@"AudioPlayerDidFinishPlaying" object:nil];
 }
 
 - (void)setupUI {
-    // 1. Background Image (will be blurred)
+    CGFloat screenWidth = self.view.frame.size.width;
+    CGFloat screenHeight = self.view.frame.size.height;
+    
+    // 1. Background Image
     self.backgroundImageView = [[UIImageView alloc] initWithFrame:self.view.bounds];
     self.backgroundImageView.contentMode = UIViewContentModeScaleAspectFill;
     self.backgroundImageView.backgroundColor = [UIColor colorWithRed:0.05 green:0.05 blue:0.07 alpha:1.0];
@@ -45,8 +69,8 @@
     self.blurEffectView.frame = self.view.bounds;
     [self.view addSubview:self.blurEffectView];
     
-    // 3. Cover Image (Large, Rounded)
-    CGFloat coverSize = self.view.frame.size.width - 60;
+    // 3. Cover Image
+    CGFloat coverSize = screenWidth - 60;
     self.coverImageView = [[UIImageView alloc] initWithFrame:CGRectMake(30, 80, coverSize, coverSize)];
     self.coverImageView.contentMode = UIViewContentModeScaleAspectFill;
     self.coverImageView.layer.cornerRadius = 15.0;
@@ -54,7 +78,7 @@
     self.coverImageView.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
     [self.view addSubview:self.coverImageView];
     
-    // 4. Title Label
+    // 4. Labels
     self.titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(30, CGRectGetMaxY(self.coverImageView.frame) + 30, coverSize, 30)];
     self.titleLabel.textAlignment = NSTextAlignmentCenter;
     self.titleLabel.font = [UIFont boldSystemFontOfSize:22];
@@ -62,7 +86,6 @@
     self.titleLabel.text = @"Chưa có bài hát";
     [self.view addSubview:self.titleLabel];
     
-    // 5. Artist Label
     self.artistLabel = [[UILabel alloc] initWithFrame:CGRectMake(30, CGRectGetMaxY(self.titleLabel.frame) + 5, coverSize, 20)];
     self.artistLabel.textAlignment = NSTextAlignmentCenter;
     self.artistLabel.font = [UIFont systemFontOfSize:16];
@@ -70,32 +93,73 @@
     self.artistLabel.text = @"Vui lòng chọn bài hát";
     [self.view addSubview:self.artistLabel];
     
-    // 6. Play/Pause Button
+    // 5. Timeline Slider
+    CGFloat sliderY = CGRectGetMaxY(self.artistLabel.frame) + 20;
+    self.timeSlider = [[UISlider alloc] initWithFrame:CGRectMake(50, sliderY, screenWidth - 100, 30)];
+    self.timeSlider.minimumTrackTintColor = [UIColor colorWithRed:0.6 green:0.2 blue:0.8 alpha:1.0];
+    self.timeSlider.maximumTrackTintColor = [UIColor colorWithWhite:1.0 alpha:0.3];
+    [self.timeSlider addTarget:self action:@selector(sliderTouchBegan:) forControlEvents:UIControlEventTouchDown];
+    [self.timeSlider addTarget:self action:@selector(sliderTouchEnded:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
+    [self.timeSlider addTarget:self action:@selector(sliderValueChanged:) forControlEvents:UIControlEventValueChanged];
+    [self.view addSubview:self.timeSlider];
+    
+    self.currentTimeLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, sliderY, 40, 30)];
+    self.currentTimeLabel.font = [UIFont systemFontOfSize:12];
+    self.currentTimeLabel.textColor = [UIColor whiteColor];
+    self.currentTimeLabel.text = @"0:00";
+    self.currentTimeLabel.textAlignment = NSTextAlignmentCenter;
+    [self.view addSubview:self.currentTimeLabel];
+    
+    self.durationLabel = [[UILabel alloc] initWithFrame:CGRectMake(screenWidth - 50, sliderY, 40, 30)];
+    self.durationLabel.font = [UIFont systemFontOfSize:12];
+    self.durationLabel.textColor = [UIColor whiteColor];
+    self.durationLabel.text = @"0:00";
+    self.durationLabel.textAlignment = NSTextAlignmentCenter;
+    [self.view addSubview:self.durationLabel];
+    
+    // 6. Controls
+    CGFloat controlY = CGRectGetMaxY(self.timeSlider.frame) + 15;
+    
+    self.prevButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    self.prevButton.frame = CGRectMake((screenWidth / 2) - 100, controlY + 15, 40, 40);
+    [self.prevButton setTitle:@"⏮" forState:UIControlStateNormal];
+    self.prevButton.titleLabel.font = [UIFont systemFontOfSize:30];
+    [self.prevButton addTarget:self action:@selector(playPrev) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:self.prevButton];
+    
     self.playPauseButton = [UIButton buttonWithType:UIButtonTypeCustom];
-    self.playPauseButton.frame = CGRectMake((self.view.frame.size.width - 70)/2, CGRectGetMaxY(self.artistLabel.frame) + 30, 70, 70);
-    self.playPauseButton.backgroundColor = [UIColor colorWithRed:0.6 green:0.2 blue:0.8 alpha:1.0]; // Tím Zing
+    self.playPauseButton.frame = CGRectMake((screenWidth - 70)/2, controlY, 70, 70);
+    self.playPauseButton.backgroundColor = [UIColor colorWithRed:0.6 green:0.2 blue:0.8 alpha:1.0];
     self.playPauseButton.layer.cornerRadius = 35.0;
     [self.playPauseButton setTitle:@"▶️" forState:UIControlStateNormal];
     self.playPauseButton.titleLabel.font = [UIFont systemFontOfSize:30];
     [self.playPauseButton addTarget:self action:@selector(playPauseTapped) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:self.playPauseButton];
     
-    // 7. Lyrics
-    self.lyricTextView = [[UITextView alloc] initWithFrame:CGRectMake(20, CGRectGetMaxY(self.playPauseButton.frame) + 30, self.view.frame.size.width - 40, self.view.frame.size.height - CGRectGetMaxY(self.playPauseButton.frame) - 100)];
-    self.lyricTextView.editable = NO;
-    self.lyricTextView.backgroundColor = [UIColor clearColor];
-    self.lyricTextView.textColor = [UIColor colorWithWhite:1.0 alpha:0.6];
-    self.lyricTextView.font = [UIFont systemFontOfSize:15];
-    self.lyricTextView.textAlignment = NSTextAlignmentCenter;
-    [self.view addSubview:self.lyricTextView];
+    self.nextButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    self.nextButton.frame = CGRectMake((screenWidth / 2) + 60, controlY + 15, 40, 40);
+    [self.nextButton setTitle:@"⏭" forState:UIControlStateNormal];
+    self.nextButton.titleLabel.font = [UIFont systemFontOfSize:30];
+    [self.nextButton addTarget:self action:@selector(playNext) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:self.nextButton];
+    
+    // 7. Volume
+    self.volumeView = [[MPVolumeView alloc] initWithFrame:CGRectMake(30, CGRectGetMaxY(self.playPauseButton.frame) + 30, screenWidth - 60, 20)];
+    self.volumeView.tintColor = [UIColor whiteColor];
+    [self.view addSubview:self.volumeView];
 }
 
-- (void)playNewSong:(Song *)song {
+- (void)playNewSong:(Song *)song playlist:(NSArray<Song *> *)playlist currentIndex:(NSInteger)index {
+    [self view]; // Bắt buộc LoadView nếu chưa load
+    
+    self.currentSong = song;
+    self.currentPlaylist = playlist;
+    self.currentIndex = index;
+    
     self.titleLabel.text = song.title;
     self.artistLabel.text = song.artistsNames;
     [self.playPauseButton setTitle:@"⏸" forState:UIControlStateNormal];
     
-    // Load cover art
     if (song.thumbnailUrl) {
         NSURL *url = [NSURL URLWithString:song.thumbnailUrl];
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
@@ -114,18 +178,7 @@
     }
     
     [[AudioPlayer sharedPlayer] playSong:song];
-    
-    self.lyricTextView.text = @"Đang tải lời bài hát...";
-    
-    [[APIService sharedService] fetchLyricForSongId:song.songId completion:^(NSDictionary *data, NSError *error) {
-        if (!error && data) {
-            // Simplified lyric handling
-            // The real API returns an array of sentences with words. For simplicity here:
-            self.lyricTextView.text = @"Lyrics found, processing not fully implemented in this demo.\n(Check debug logs for raw lyric data)";
-        } else {
-            self.lyricTextView.text = @"No lyrics available.";
-        }
-    }];
+    [self startProgressTimer];
 }
 
 - (void)playPauseTapped {
@@ -136,6 +189,75 @@
         [[AudioPlayer sharedPlayer] resume];
         [self.playPauseButton setTitle:@"⏸" forState:UIControlStateNormal];
     }
+}
+
+- (void)playNext {
+    if (self.currentPlaylist.count == 0) return;
+    
+    NSInteger nextIndex = self.currentIndex + 1;
+    if (nextIndex >= self.currentPlaylist.count) {
+        nextIndex = 0; // Vòng lặp
+    }
+    
+    Song *nextSong = self.currentPlaylist[nextIndex];
+    [self playNewSong:nextSong playlist:self.currentPlaylist currentIndex:nextIndex];
+}
+
+- (void)playPrev {
+    if (self.currentPlaylist.count == 0) return;
+    
+    NSInteger prevIndex = self.currentIndex - 1;
+    if (prevIndex < 0) {
+        prevIndex = self.currentPlaylist.count - 1; // Vòng lặp
+    }
+    
+    Song *prevSong = self.currentPlaylist[prevIndex];
+    [self playNewSong:prevSong playlist:self.currentPlaylist currentIndex:prevIndex];
+}
+
+- (void)handleSongEnded {
+    [self playNext];
+}
+
+#pragma mark - Timeline Slider
+- (void)startProgressTimer {
+    if (self.progressTimer) {
+        [self.progressTimer invalidate];
+    }
+    self.progressTimer = [NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(updateProgress) userInfo:nil repeats:YES];
+}
+
+- (void)updateProgress {
+    if (self.isUserScrubbing) return;
+    
+    CGFloat duration = [[AudioPlayer sharedPlayer] getDuration];
+    CGFloat currentTime = [[AudioPlayer sharedPlayer] getCurrentTime];
+    
+    if (duration > 0) {
+        self.timeSlider.maximumValue = duration;
+        self.timeSlider.value = currentTime;
+        self.durationLabel.text = [self formatTime:duration];
+        self.currentTimeLabel.text = [self formatTime:currentTime];
+    }
+}
+
+- (void)sliderTouchBegan:(UISlider *)slider {
+    self.isUserScrubbing = YES;
+}
+
+- (void)sliderTouchEnded:(UISlider *)slider {
+    self.isUserScrubbing = NO;
+    [[AudioPlayer sharedPlayer] seekToTime:slider.value];
+}
+
+- (void)sliderValueChanged:(UISlider *)slider {
+    self.currentTimeLabel.text = [self formatTime:slider.value];
+}
+
+- (NSString *)formatTime:(CGFloat)timeInSeconds {
+    int minutes = floor(timeInSeconds / 60);
+    int seconds = round(timeInSeconds - (minutes * 60));
+    return [NSString stringWithFormat:@"%d:%02d", minutes, seconds];
 }
 
 @end
