@@ -55,7 +55,6 @@
 
 - (void)setupUI {
     CGFloat screenWidth = self.view.frame.size.width;
-    CGFloat screenHeight = self.view.frame.size.height;
     
     // 1. Background Image
     self.backgroundImageView = [[UIImageView alloc] initWithFrame:self.view.bounds];
