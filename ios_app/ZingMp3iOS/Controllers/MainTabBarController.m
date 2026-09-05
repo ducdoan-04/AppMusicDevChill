@@ -15,17 +15,17 @@
     HomeViewController *homeVC = [[HomeViewController alloc] init];
     homeVC.title = @"Khám Phá";
     UINavigationController *homeNav = [[UINavigationController alloc] initWithRootViewController:homeVC];
-    homeNav.tabBarItem = [[UITabBarItem alloc] initWithTabBarSystemItem:UITabBarSystemItemFeatured tag:0];
+    homeNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"Khám Phá" image:nil tag:0];
     
     SearchViewController *searchVC = [[SearchViewController alloc] init];
     searchVC.title = @"Tìm Kiếm";
     UINavigationController *searchNav = [[UINavigationController alloc] initWithRootViewController:searchVC];
-    searchNav.tabBarItem = [[UITabBarItem alloc] initWithTabBarSystemItem:UITabBarSystemItemSearch tag:1];
+    searchNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"Tìm Kiếm" image:nil tag:1];
     
     PlayerViewController *playerVC = [PlayerViewController sharedPlayerVC];
     playerVC.title = @"Đang Phát";
     UINavigationController *playerNav = [[UINavigationController alloc] initWithRootViewController:playerVC];
-    playerNav.tabBarItem = [[UITabBarItem alloc] initWithTabBarSystemItem:UITabBarSystemItemPlay tag:2];
+    playerNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"Đang Phát" image:nil tag:2];
     
     self.viewControllers = @[homeNav, searchNav, playerNav];
     
