@@ -29,7 +29,6 @@
 
 - (void)addDownloadedSong:(Song *)song localPath:(NSString *)path {
     // 1. Add to DownloadedSongsData
-    NSMutableArray *songs = [NSMutableArray array];
     NSData *data = [[NSUserDefaults standardUserDefaults] objectForKey:@"DownloadedSongsData"];
     NSMutableArray *dicts = [NSMutableArray array];
     
