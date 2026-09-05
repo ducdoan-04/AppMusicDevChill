@@ -21,6 +21,7 @@ jobs:
     - name: Setup Theos and iOS SDK
       run: |
         git clone --recursive https://github.com/theos/theos.git $GITHUB_WORKSPACE/theos
+        rm -rf $GITHUB_WORKSPACE/theos/sdks
         git clone https://github.com/theos/sdks.git $GITHUB_WORKSPACE/theos/sdks
 
     - name: Build App for armv7 (iOS 9.3.5)
